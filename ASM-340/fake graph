@@ -1,0 +1,67 @@
+import time
+import random
+import math
+from collections import deque
+
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+
+MAX_POINTS = 150
+
+# Use deque to keep a rolling window of the most recent data
+x_data = deque(maxlen=MAX_POINTS)
+y_data = deque(maxlen=MAX_POINTS)
+
+start_time = time.perf_counter()
+
+fig, ax = plt.subplots()
+line, = ax.plot([], [])
+
+ax.set_title("Simulated Leak Rate Real-time Graph")
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Leak Rate (Pa·m³/s)")
+ax.set_yscale("log")
+ax.set_ylim(1e-10, 1e-3)
+ax.grid(True, which="both")
+
+def get_fake_leak_rate(t):
+    """
+    Simulates a permeation leak rising from a low background
+    and eventually reaching a steady-state maximum.
+    """
+    # Define your starting background and the final steady-state leak rate
+    background = 1e-10
+    steady_state = 1e-4 
+    
+    # 1 - exp(-k*t) creates a curve that rises and levels off over time.
+    # A smaller 'k' (like 0.05) makes it rise slower.
+    base = background + steady_state * (1 - math.exp(-0.05 * t))
+    
+    # Add a little bit of realistic instrument noise
+    noise_factor = random.uniform(0.9, 1.1)
+    value = max(base * noise_factor, 1e-10)
+    
+    return value
+
+def update(frame):
+    # Prevent errors if the window is closed during an update loop
+    if not plt.fignum_exists(fig.number):
+        return line,
+
+    current_time = time.perf_counter() - start_time
+    leak_rate = get_fake_leak_rate(current_time)
+
+    x_data.append(current_time)
+    y_data.append(leak_rate)
+
+    line.set_data(x_data, y_data)
+
+    # Keep a sliding window of the last 30 seconds
+    ax.set_xlim(max(0, current_time - 30), max(30, current_time))
+
+    return line,
+
+# Added cache_frame_data=False to prevent matplotlib warnings on continuous streams
+ani = FuncAnimation(fig, update, interval=200, cache_frame_data=False)
+
+plt.show()
