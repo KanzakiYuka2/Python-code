@@ -1,0 +1,28 @@
+PEEK 3 mm: Abaqus vs MSE-2600 (NO FITTING)
+=====================================================
+RPT rows: 121, MSE FINE_TEST rows: 2665
+Model area: 40 mm^2 (assumed depth=1.0 mm)
+Experiment area: 1681 mm^2
+Area factor: 42.025
+RFL -> Q factor: 2.59403143e+07 (Pa*m^3/s)/(kg/s)
+Background method: none, background: 0.00000000e+00 Pa*m^3/s
+Experimental zero time at elapsed_s=480.000
+Trim before He: True, removed rows: 239
+Abaqus final RFL: 7.83078000e-15 (mass-unit/s)
+Abaqus reference Q: 2.03132894e-07 Pa*m^3/s
+MSE reference Q (last 300 s median): 2.05000000e-07 Pa*m^3/s
+MSE FINE_TEST maximum Q (raw): 2.06000000e-07 Pa*m^3/s
+Abaqus / MSE reference ratio: 0.990892
+Abaqus t50 (with chosen reference): 1180.17602 s
+MSE t50 (with chosen reference): 1151.11550 s
+t50 difference (MSE - Abaqus): -29.06052 s
+Overlap RMSE [Pa*m^3/s]: 4.87109210e-09
+Overlap normalized RMSE: 0.017262
+
+CAUTIONS:
+- RFL is assumed kg/s, requiring consistent Abaqus unit conventions.
+- Abaqus 2D out-of-plane depth is ASSUMED 1 mm until verified.
+- Final experimental 300 s median is a REFERENCE, not proven steady state.
+- Experimental time zero is not automatically He exposure onset.
+- FINE_TEST selection removes VENTING/TEST_READY but not a He supply change.
+- RMSE is descriptive only; no parameter fitting has been performed.

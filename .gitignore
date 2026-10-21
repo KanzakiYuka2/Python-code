@@ -1,0 +1,7 @@
+# Workspace folders excluded from version control
+/yandere/
+/.vscode/
+
+# Python caches in any folder
+__pycache__/
+*.py[cod]

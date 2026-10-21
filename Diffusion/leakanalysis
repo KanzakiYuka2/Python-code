@@ -1,0 +1,135 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from pathlib import Path
+from openpyxl import load_workbook
+from openpyxl.drawing.image import Image
+
+
+# =========================================================
+# Settings
+# =========================================================
+
+input_path = Path("Test202606220001.CSV")
+output_excel_path = Path("Test202606220001_processed.xlsx")
+
+h_graph_path = Path("leakrate_time0622.png")
+i_graph_path = Path("pressure_time0622.png")
+
+
+# =========================================================
+# Excel-like ROUND function
+# =========================================================
+
+def excel_round(x, digits=0):
+    factor = 10 ** digits
+    return np.sign(x) * np.floor(np.abs(x) * factor + 0.5) / factor
+
+
+# =========================================================
+# Read CSV
+# =========================================================
+# Your CSV has metadata from line 1 to line 14.
+# Actual data starts from line 15.
+
+df = pd.read_csv(
+    input_path,
+    skiprows=14,
+    header=None,
+    names=["time_s", "B_CH1", "C_CH2", "D_CH3", "E_CH4"],
+    encoding="shift_jis"
+)
+
+# =========================================================
+# Convert columns to numeric
+# =========================================================
+
+for col in ["time_s", "B_CH1", "C_CH2", "D_CH3", "E_CH4"]:
+    df[col] = pd.to_numeric(df[col], errors="coerce")
+
+df = df.dropna(subset=["time_s", "B_CH1", "C_CH2", "D_CH3", "E_CH4"]).reset_index(drop=True)
+
+
+# =========================================================
+# F to K calculation
+# Same logic as Excel F16:K16
+# =========================================================
+
+df["F"] = 10 - df["C_CH2"] - 12
+df["G"] = excel_round(df["F"], 0)
+df["H"] = df["B_CH1"] * (10 ** df["G"])
+df["I"] = (10 ** (df["D_CH3"] - 5.5)) * 100
+df["J"] = 10 ** (df["E_CH4"] - 3)
+df["K"] = df["J"] - df["I"]
+
+
+# =========================================================
+# Save processed data to Excel
+# =========================================================
+
+df.to_excel(output_excel_path, index=False, sheet_name="Processed Data")
+
+print(f"Processed Excel saved: {output_excel_path}")
+
+
+# =========================================================
+# Make H graph
+# =========================================================
+
+plt.figure(figsize=(10, 5))
+plt.plot(df["time_s"], df["H"])
+plt.xlabel("Time [s]")
+plt.ylabel("Leak Rate [Pa m³/s]")
+plt.title("Leak Rate vs Time")
+plt.grid(True)
+plt.yscale("log")
+plt.tight_layout()
+plt.savefig(h_graph_path, dpi=300)
+plt.close()
+
+print(f"H graph saved: {h_graph_path}")
+
+
+# =========================================================
+# Make I graph
+# =========================================================
+
+plt.figure(figsize=(10, 5))
+plt.plot(df["time_s"], df["I"])
+plt.xlabel("Time [s]")
+plt.ylabel("Pressure [Pa]")
+plt.title("Pressure vs Time")
+plt.grid(True)
+plt.yscale("log")
+plt.tight_layout()
+plt.savefig(i_graph_path, dpi=300)
+plt.close()
+
+print(f"I graph saved: {i_graph_path}")
+
+
+# =========================================================
+# Insert graphs into Excel
+# =========================================================
+
+wb = load_workbook(output_excel_path)
+
+# Create graph sheet
+if "Graphs" in wb.sheetnames:
+    ws_graph = wb["Graphs"]
+else:
+    ws_graph = wb.create_sheet("Graphs")
+
+ws_graph["A1"] = "Leak Rate vs Time"
+ws_graph["A25"] = "Pressure vs Time"
+
+img_h = Image(str(h_graph_path))
+img_i = Image(str(i_graph_path))
+
+
+ws_graph.add_image(img_h, "A2")
+ws_graph.add_image(img_i, "A26")
+
+wb.save(output_excel_path)
+
+print(f"Graphs inserted into Excel: {output_excel_path}")
