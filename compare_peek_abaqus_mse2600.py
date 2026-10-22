@@ -19,8 +19,8 @@ import matplotlib.pyplot as plt
 # 1. SETTINGS: EDIT HERE FIRST
 # ============================================================
 BASE_DIR = Path(__file__).resolve().parent
-ABAQUS_RPT = BASE_DIR / "PEEK_2mm_RE.rpt"
-MSE_CSV = BASE_DIR / "Diffusion" / "mse2600_log_20261020_2.csv"
+ABAQUS_RPT = BASE_DIR / "PEEK_2mm_RFL_total.rpt"
+MSE_CSV = BASE_DIR / "Diffusion" / "mse2600_log_20260716_1.csv"
 OUTPUT_DIR = BASE_DIR / "comparison_results"
 
 # Geometric scaling: 2D width x assumed unit out-of-plane depth.
@@ -34,7 +34,7 @@ EXP_AREA_MM2 = 41.0 * 41.0
 RFL_SIGN = +1.0
 
 # Ideal-gas conversion: Q(Pa*m^3/s) = (mass flow kg/s) * R*T/M_He.
-TEMPERATURE_K = 295.65
+TEMPERATURE_K = 297.15
 GAS_CONSTANT = 8.314462618     # Pa*m^3/(mol*K)
 HE_MOLAR_MASS_KG_MOL = 4.002602e-3
 
@@ -327,7 +327,7 @@ def main(argv=None):
     norm_rmse = (float(np.sqrt(np.mean((aligned["exp_norm"] - aligned["sim_norm"]) ** 2)))
                  if len(aligned) else float("nan"))
     summary = (
-        "PP 3 mm: Abaqus vs MSE-2600 (NO FITTING)\n"
+        "PEEK 2 mm: Abaqus vs MSE-2600 (NO FITTING)\n"
         "=====================================================\n"
         f"RPT rows: {len(sim)}, MSE FINE_TEST rows: {len(exp)}\n"
         f"Model area: {model_area_mm2:.6g} mm^2 (assumed depth={MODEL_OUT_OF_PLANE_MM} mm)\n"

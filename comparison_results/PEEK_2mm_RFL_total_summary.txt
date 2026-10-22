@@ -1,4 +1,4 @@
-PEEK 1 mm: Abaqus vs MSE-2600 (NO FITTING)
+PEEK 2 mm: Abaqus vs MSE-2600 (NO FITTING)
 =====================================================
 RPT rows: 121, MSE FINE_TEST rows: 3157
 Model area: 40 mm^2 (assumed depth=1.0 mm)
@@ -8,15 +8,14 @@ RFL -> Q factor: 2.59403143e+07 (Pa*m^3/s)/(kg/s)
 Background method: none, background: 0.00000000e+00 Pa*m^3/s
 Experimental zero time at elapsed_s=360.000
 Trim before He: True, removed rows: 179
-Experimental end time after He [min]: None, removed end rows: 0
 Abaqus final RFL: 4.49367860e-15 (mass-unit/s)
 Abaqus reference Q: 1.16567435e-07 Pa*m^3/s
 MSE reference Q (last 300 s median): 1.19000000e-07 Pa*m^3/s
 MSE FINE_TEST maximum Q (raw): 1.20000000e-07 Pa*m^3/s
 Abaqus / MSE reference ratio: 0.979558
-Abaqus t50 (with chosen reference): 44.02924 min
-MSE t50 (with chosen reference): 44.27023 min
-t50 difference (MSE - Abaqus): 0.24099 min
+Abaqus t50 (with chosen reference): 2641.75469 s
+MSE t50 (with chosen reference): 2656.21400 s
+t50 difference (MSE - Abaqus): 14.45931 s
 Overlap RMSE [Pa*m^3/s]: 6.19560726e-09
 Overlap normalized RMSE: 0.041492
 
