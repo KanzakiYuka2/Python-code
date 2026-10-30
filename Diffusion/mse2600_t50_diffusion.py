@@ -19,10 +19,10 @@ import pandas as pd
 # Resolve input filenames relative to this script's Diffusion folder, even
 # when the script is launched from another working directory.
 DATA_DIR = Path(__file__).resolve().parent
-INPUT_CSV = DATA_DIR / "mse2600_log_20261020_2.csv"
+INPUT_CSV = DATA_DIR / "mse2600_log_20261030_1.csv"
 
 # Choose the saved graph filename for this analysis.
-OUTPUT_IMAGE = Path("PEEK2mm_20261020_1.png")
+OUTPUT_IMAGE = Path("PEEK1mm_20261030_1.png")
 
 TIME_COLUMN = "pc_datetime"
 ELAPSED_COLUMN = "elapsed_s"
@@ -34,7 +34,7 @@ TRIM_FRONT_MINUTES = 0.0
 TRIM_BACK_MINUTES = 0.0
 
 # Helium introduction time measured from the first retained point.
-HE_START_DELAY_MINUTES = 6.0
+HE_START_DELAY_MINUTES = 4.0
 
 # Median background interval immediately before helium introduction.
 BASELINE_MINUTES = 1.0
@@ -43,7 +43,7 @@ BASELINE_MINUTES = 1.0
 STEADY_LAST_MINUTES = 10.0
 
 # Specimen thickness used by D = L^2 / (7.199 * t50).
-THICKNESS_MM = 2.0
+THICKNESS_MM = 1.0
 
 # Signal processing and crossing confirmation.
 RESAMPLE_SECONDS = 10

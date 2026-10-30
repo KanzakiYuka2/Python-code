@@ -7,10 +7,10 @@
 
 # MSE2600 leak rates are already in Pa m^3/s.
 # Use the steady-state value reported by mse2600_t50_diffusion.py.
-Q_SS_PA_M3_S = 6.92e-8
+Q_SS_PA_M3_S = 2.28e-7
 
 # Specimen dimensions.
-THICKNESS_MM = 2.0
+THICKNESS_MM = 1.0
 EXPOSED_WIDTH_MM = 41.0
 EXPOSED_HEIGHT_MM = 41.0
 
@@ -20,7 +20,7 @@ UPSTREAM_HE_PRESSURE_PA = 106325.0
 DOWNSTREAM_HE_PRESSURE_PA = 1.5
 
 # Measurement temperature.
-TEMPERATURE_C = 22.5
+TEMPERATURE_C = 18.5
 
 
 # =========================================================

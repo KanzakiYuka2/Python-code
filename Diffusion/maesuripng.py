@@ -16,19 +16,22 @@ import pandas as pd
 # User settings
 # =========================================================
 
-INPUT_CSV = Path("mse2600_log_20260721_1.csv")
+# Resolve the CSV from this script's Diffusion folder, regardless of cwd.
+DIFFUSION_DIR = Path(__file__).resolve().parent
+INPUT_CSV = DIFFUSION_DIR / "mse2600_log_20261030_1.csv"
 
 # Change this name for each graph if desired. When left as None, the date in
 # the CSV filename is used, for example: maesuri_20260828.png.
+# Only the filename is used; output is always saved in DIFFUSION_DIR.
 OUTPUT_IMAGE = None
 
 # Remove unwanted data from the beginning or end before plotting.
 TRIM_START_MINUTES = 0.0
 TRIM_END_MINUTES = 0.0
 
-# Axis range. Set X_MAX_HOURS to None to use the complete retained duration.
-X_MIN_HOURS = 0.0
-X_MAX_HOURS = None
+# Axis range in seconds. Set X_MAX_SECONDS to None to use the complete retained duration.
+X_MIN_SECONDS = 0.0
+X_MAX_SECONDS = None
 Y_MIN = 1e-11
 Y_MAX = 1e-6
 
@@ -42,12 +45,12 @@ GRAPH_DPI = 600
 
 # Event markers (minutes from the beginning of the displayed data).
 # Replace None with the measured value for each CSV, for example 8.0.
-HE_INTRODUCTION_MINUTES = 8.0
+HE_INTRODUCTION_MINUTES = 5.0
 
 # t50 is entered as the elapsed time AFTER helium introduction. Its vertical
 # line is drawn automatically at HE_INTRODUCTION_MINUTES + T50_MINUTES_AFTER_HE.
 # Replace None with the calculated/manual t50, for example 24.5.
-T50_MINUTES_AFTER_HE = 19.089
+T50_MINUTES_AFTER_HE = None
 
 # A compact legend is used because the graph is only 7.5 cm wide in Word.
 LEGEND_FONT_SIZE_PT = 7.5
@@ -60,9 +63,9 @@ LEGEND_FONT_SIZE_PT = 7.5
 if OUTPUT_IMAGE is None:
     date_match = re.search(r"\d{8}", INPUT_CSV.stem)
     suffix = date_match.group() if date_match else INPUT_CSV.stem
-    output_image = Path(f"maesuri_{suffix}.png")
+    output_image = DIFFUSION_DIR / f"maesuri_{suffix}.png"
 else:
-    output_image = Path(OUTPUT_IMAGE)
+    output_image = DIFFUSION_DIR / Path(OUTPUT_IMAGE).name
 
 
 # =========================================================
@@ -121,9 +124,9 @@ if df.empty:
     raise ValueError("No data remain after trimming.")
 
 # Restart the retained data at elapsed time zero.
-df["elapsed_h"] = (
+df["plot_elapsed_s"] = (
     df["elapsed_s"] - float(df["elapsed_s"].iloc[0])
-) / 3600.0
+)
 
 
 # =========================================================
@@ -151,7 +154,7 @@ fig, ax = plt.subplots(
 )
 
 ax.plot(
-    df["elapsed_h"],
+    df["plot_elapsed_s"],
     df["leak_rate"],
     linewidth=LINE_WIDTH_PT,
     color="#1f77b4",
@@ -164,9 +167,9 @@ if HE_INTRODUCTION_MINUTES is not None:
     if HE_INTRODUCTION_MINUTES < 0:
         raise ValueError("HE_INTRODUCTION_MINUTES cannot be negative.")
 
-    he_time_h = HE_INTRODUCTION_MINUTES / 60.0
+    he_time_s = HE_INTRODUCTION_MINUTES * 60.0
     ax.axvline(
-        he_time_h,
+        he_time_s,
         color="black",
         linestyle="--",
         linewidth=1.0,
@@ -177,15 +180,15 @@ if HE_INTRODUCTION_MINUTES is not None:
         if T50_MINUTES_AFTER_HE < 0:
             raise ValueError("T50_MINUTES_AFTER_HE cannot be negative.")
 
-        t50_position_h = (
+        t50_position_s = (
             HE_INTRODUCTION_MINUTES + T50_MINUTES_AFTER_HE
-        ) / 60.0
+        ) * 60.0
         ax.axvline(
-            t50_position_h,
+            t50_position_s,
             color="#d97706",
             linestyle="-.",
             linewidth=1.0,
-            label=rf"$t_{{50}}$ = {T50_MINUTES_AFTER_HE:g} min",
+            label=rf"$t_{{50}}$ = {T50_MINUTES_AFTER_HE * 60.0:g} s",
         )
 
 elif T50_MINUTES_AFTER_HE is not None:
@@ -195,7 +198,7 @@ elif T50_MINUTES_AFTER_HE is not None:
 
 # The title is intentionally omitted because the Word figure caption provides
 # the description. Labels and tick numbers use the same final font size.
-ax.set_xlabel("Time [h]", fontsize=FONT_SIZE_PT)
+ax.set_xlabel("Time [s]", fontsize=FONT_SIZE_PT)
 ax.set_ylabel("Leak Rate (Q) [Pa·m³/s]", fontsize=FONT_SIZE_PT)
 ax.tick_params(
     axis="both",
@@ -223,8 +226,8 @@ for spine in ax.spines.values():
 ax.set_yscale("log")
 ax.set_ylim(Y_MIN, Y_MAX)
 ax.set_xlim(
-    left=X_MIN_HOURS,
-    right=X_MAX_HOURS,
+    left=X_MIN_SECONDS,
+    right=X_MAX_SECONDS,
 )
 
 # Limit the number of x-axis labels so they remain legible in a 7.5 cm graph.
