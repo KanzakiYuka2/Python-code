@@ -19,8 +19,8 @@ import matplotlib.pyplot as plt
 # 1. SETTINGS: EDIT HERE FIRST
 # ============================================================
 BASE_DIR = Path(__file__).resolve().parent
-ABAQUS_RPT = BASE_DIR / "PEEK_2mm_RFL_total.rpt"
-MSE_CSV = BASE_DIR / "Diffusion" / "mse2600_log_20260716_1.csv"
+ABAQUS_RPT = BASE_DIR / "PEEK_1mm_RFL_RE.rpt"
+MSE_CSV = BASE_DIR / "Diffusion" / "mse2600_log_20261030_1.csv"
 OUTPUT_DIR = BASE_DIR / "comparison_results"
 
 # Geometric scaling: 2D width x assumed unit out-of-plane depth.
@@ -34,7 +34,7 @@ EXP_AREA_MM2 = 41.0 * 41.0
 RFL_SIGN = +1.0
 
 # Ideal-gas conversion: Q(Pa*m^3/s) = (mass flow kg/s) * R*T/M_He.
-TEMPERATURE_K = 297.15
+TEMPERATURE_K = 291.65
 GAS_CONSTANT = 8.314462618     # Pa*m^3/(mol*K)
 HE_MOLAR_MASS_KG_MOL = 4.002602e-3
 
@@ -45,7 +45,7 @@ FILTER_FINE_TEST = True
 # CSV記録開始から10分後にHeを導入した場合は 10.0 に設定します。
 # 導入前をカットし、He導入時点を比較グラフの時刻0にします。
 # 実際の導入時刻を設定してください（0.0 はCSV記録開始）。
-HE_START_MIN = 6.0
+HE_START_MIN = 4.0
 # EXP_END_MIN = 600.0   # He導入後90分まで使用
 # Remove pre-He samples before smoothing, plotting, and comparison/export.
 # Baseline estimation still uses the original measurement data.
@@ -267,7 +267,7 @@ def main(argv=None):
     plt.xlim(x_min, x_max)
     plt.xlabel("Time [s]")
     plt.ylabel(r"He leak rate [Pa $\cdot$ m$^3$/s]", fontsize=Y_AXIS_LABEL_FONT_SIZE_PT)
-    plt.title("PEEK 2 mm: absolute leak-rate comparison")
+    plt.title("PEEK 1 mm: absolute leak-rate comparison")
     plt.grid(alpha=0.25)
     plt.legend() 
     save_fig("01_absolute_leak_rate.png")
@@ -285,7 +285,7 @@ def main(argv=None):
     plt.xlim(x_min, x_max)
     plt.xlabel("Time [s]")
     plt.ylabel("Normalized flow / reference [-]", fontsize=Y_AXIS_LABEL_FONT_SIZE_PT)
-    plt.title("PEEK 2 mm: normalized permeation response")
+    plt.title("PEEK 1 mm: normalized permeation response")
     plt.grid(alpha=0.25)
     plt.legend()
     save_fig("02_normalized_comparison.png")
@@ -301,7 +301,7 @@ def main(argv=None):
     plt.xlim(x_min, x_max)
     plt.xlabel("Time [s]")
     plt.ylabel(r"He leak rate [Pa $\cdot$ m$^3$/s] (log)", fontsize=Y_AXIS_LABEL_FONT_SIZE_PT)
-    plt.title("PEEK 2 mm: early-time comparison (log scale)")
+    plt.title("PEEK 1 mm: early-time comparison (log scale)")
     plt.grid(alpha=0.25, which="both")
     plt.legend()
     save_fig("03_log_leak_rate.png")
@@ -327,7 +327,7 @@ def main(argv=None):
     norm_rmse = (float(np.sqrt(np.mean((aligned["exp_norm"] - aligned["sim_norm"]) ** 2)))
                  if len(aligned) else float("nan"))
     summary = (
-        "PEEK 2 mm: Abaqus vs MSE-2600 (NO FITTING)\n"
+        "PEEK 1 mm: Abaqus vs MSE-2600 (NO FITTING)\n"
         "=====================================================\n"
         f"RPT rows: {len(sim)}, MSE FINE_TEST rows: {len(exp)}\n"
         f"Model area: {model_area_mm2:.6g} mm^2 (assumed depth={MODEL_OUT_OF_PLANE_MM} mm)\n"
