@@ -1,0 +1,29 @@
+PP 2 mm: Abaqus vs MSE-2600 (NO FITTING)
+=====================================================
+RPT rows: 121, MSE retained post-He rows: 2992
+Model area: 40 mm^2 (assumed depth=1.0 mm)
+Experiment area: 1681 mm^2
+Area factor: 42.025
+RFL -> Q factor: 2.51808301e+07 (Pa*m^3/s)/(kg/s)
+Background method: pre-He median, background: 2.97500000e-10 Pa*m^3/s
+Experimental zero time at elapsed_s=542.154
+Trim before He: True, removed rows: 30
+Abaqus final RFL: 1.32891000e-14 (mass-unit/s)
+Abaqus reference Q: 3.34630569e-07 Pa*m^3/s
+MSE reference Q (final 5 min mode minus baseline): 3.24702500e-07 Pa*m^3/s
+MSE Q_initial=2.975000000000e-10, Q_SS=3.250000000000e-07, Q_50=1.626487500000e-07
+MSE post-He maximum Q (raw): 3.26000000e-07 Pa*m^3/s
+Abaqus / MSE reference ratio: 1.030576
+Abaqus t50 (with chosen reference): 1026.39732 s
+MSE t50 (with chosen reference): 990.59500 s
+t50 difference (MSE - Abaqus): -35.80232 s
+Overlap RMSE [Pa*m^3/s]: 8.67783177e-09
+Overlap normalized RMSE: 0.012629
+
+CAUTIONS:
+- RFL is assumed kg/s, requiring consistent Abaqus unit conventions.
+- Abaqus 2D out-of-plane depth is ASSUMED 1 mm until verified.
+- Final experimental mode is a REFERENCE, not proven steady state.
+- Experimental time zero is not automatically He exposure onset.
+- All positive experimental samples are used, matching the standalone t50 script.
+- RMSE is descriptive only; no parameter fitting has been performed.

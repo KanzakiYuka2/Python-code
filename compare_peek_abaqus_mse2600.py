@@ -38,30 +38,20 @@ TEMPERATURE_K = 288.45
 GAS_CONSTANT = 8.314462618     # Pa*m^3/(mol*K)
 HE_MOLAR_MASS_KG_MOL = 4.002602e-3
 
-# Apply only the FINE_TEST measurement period; exclude venting / ready.
-FILTER_FINE_TEST = True
-
-# He導入までの時間 [分]：ここを直接変更してください。
-# CSV記録開始から10分後にHeを導入した場合は 10.0 に設定します。
-# 導入前をカットし、He導入時点を比較グラフの時刻0にします。
-# 実際の導入時刻を設定してください（0.0 はCSV記録開始）。
-HE_START_MIN = 8.0
+# Match the standalone experimental t50 settings (no FINE_TEST filter).
+TRIM_FRONT_MINUTES = 8.0
+TRIM_BACK_MINUTES = 0.0
+HE_START_DELAY_MINUTES =1.0
+BASELINE_MINUTES = 1.0
+STEADY_LAST_MINUTES = 5.0
+RESAMPLE_SECONDS = 10
+SMOOTH_WINDOW_POINTS = 7
+CONFIRM_POINTS = 3
 # EXP_END_MIN = 600.0   # He導入後90分まで使用
 # Remove pre-He samples before smoothing, plotting, and comparison/export.
 # Baseline estimation still uses the original measurement data.
 TRIM_BEFORE_HE = True
 
-# Experimental baseline correction: "none", "fixed", "initial_median".
-BASELINE_METHOD = "none"
-BASELINE_FIXED_PA_M3_S = 0.0
-BASELINE_INITIAL_WINDOW_S = (0.0, 300.0)
-
-# Smooth experimental trace for display and t50 ONLY. Raw data is retained.
-SMOOTH_POINTS = 11            # ~22 seconds at ~2 sec per sample.
-
-# The last N sec of FINE_TEST are used as an experimental REFERENCE level.
-# This is not proof of a physically steady plateau.
-EXP_REFERENCE_LAST_S = 300.0
 SIM_REFERENCE_LAST_S = 0.0   # 0: use last Abaqus value.
 
 # Plot range in seconds. Set to None to use experiment extent automatically.
@@ -101,28 +91,199 @@ def read_abaqus_rpt(path):
               .sort_values("time_s").reset_index(drop=True))
 
 
-def read_mse_csv(path):
-    if not path.exists():
-        raise FileNotFoundError(f"MSE-2600 CSV not found: {path}")
-    df = pd.read_csv(path, encoding="utf-8-sig")
-    df.columns = df.columns.str.strip()
-    required = {"elapsed_s", "leak_rate", "leak_rate_unit", "process"}
-    missing = required - set(df.columns)
-    if missing:
-        raise ValueError(f"Missing MSE-2600 columns: {sorted(missing)}")
-    unit = df["leak_rate_unit"].dropna().astype(str).str.strip().unique()
-    if set(unit) != {"Pa_m3_s"}:
-        raise ValueError(f"Expected Pa_m3_s leak-rate units; got {list(unit)}")
-    if FILTER_FINE_TEST:
-        df = df[df["process"].astype(str).str.strip() == "FINE_TEST"].copy()
-    df["elapsed_s"] = pd.to_numeric(df["elapsed_s"], errors="coerce")
-    df["leak_rate"] = pd.to_numeric(df["leak_rate"], errors="coerce")
-    df = df.dropna(subset=["elapsed_s", "leak_rate"])
-    df = df.sort_values("elapsed_s").drop_duplicates("elapsed_s")
-    if len(df) < 3:
-        raise ValueError("Too few valid experimental data points.")
-    return df.reset_index(drop=True)
+def analyze_experiment(path, onset_s=None):
+    """Match the standalone experimental t50 processing and settings."""
+    INPUT_CSV = path
+    TIME_COLUMN, ELAPSED_COLUMN, Q_COLUMN = "pc_datetime", "elapsed_s", "leak_rate"
+    required_columns = [TIME_COLUMN, ELAPSED_COLUMN, Q_COLUMN]
 
+    try:
+        df = pd.read_csv(
+            INPUT_CSV,
+            usecols=required_columns,
+            encoding="utf-8-sig",
+            low_memory=False,
+        )
+    except ValueError as exc:
+        raise ValueError(
+            "This does not appear to be a supported MSE2600 CSV.\n"
+            f"Required columns: {', '.join(required_columns)}"
+        ) from exc
+
+    df[TIME_COLUMN] = pd.to_datetime(df[TIME_COLUMN], errors="coerce")
+    df[ELAPSED_COLUMN] = pd.to_numeric(df[ELAPSED_COLUMN], errors="coerce")
+    df[Q_COLUMN] = pd.to_numeric(df[Q_COLUMN], errors="coerce")
+
+    df = (
+        df.dropna(subset=[ELAPSED_COLUMN, Q_COLUMN])
+        .sort_values(ELAPSED_COLUMN)
+        .reset_index(drop=True)
+    )
+
+    # Zero and negative leak rates cannot be displayed on a logarithmic graph.
+    df = df.loc[df[Q_COLUMN] > 0].copy()
+
+    if df.empty:
+        raise ValueError("No valid positive leak-rate data were found.")
+
+
+    # =========================================================
+    # Trim first, then restart retained elapsed time from zero
+    # =========================================================
+
+    if TRIM_FRONT_MINUTES < 0 or TRIM_BACK_MINUTES < 0:
+        raise ValueError("Front and back trim durations cannot be negative.")
+
+    original_start_s = float(df[ELAPSED_COLUMN].iloc[0])
+    original_end_s = float(df[ELAPSED_COLUMN].iloc[-1])
+    keep_start_s = original_start_s + TRIM_FRONT_MINUTES * 60.0
+    keep_end_s = original_end_s - TRIM_BACK_MINUTES * 60.0
+
+    if keep_end_s <= keep_start_s:
+        raise ValueError(
+            "The trim settings leave no usable time interval. Reduce "
+            "TRIM_FRONT_MINUTES or TRIM_BACK_MINUTES."
+        )
+
+    df = df.loc[
+        (df[ELAPSED_COLUMN] >= keep_start_s)
+        & (df[ELAPSED_COLUMN] <= keep_end_s)
+    ].copy()
+
+    if df.empty:
+        raise ValueError("No data remain after trimming.")
+
+    retained_start_s = float(df[ELAPSED_COLUMN].iloc[0])
+    df["retained_elapsed_s"] = df[ELAPSED_COLUMN] - retained_start_s
+
+    retained_duration_s = float(df["retained_elapsed_s"].iloc[-1])
+    he_start_s = HE_START_DELAY_MINUTES * 60.0 if onset_s is None else onset_s - retained_start_s
+
+    if HE_START_DELAY_MINUTES < 0:
+        raise ValueError("HE_START_DELAY_MINUTES cannot be negative.")
+
+    if he_start_s >= retained_duration_s:
+        raise ValueError(
+            "Helium introduction is outside the retained data. Reduce trimming "
+            "or HE_START_DELAY_MINUTES."
+        )
+
+    df["time_from_he_s"] = df["retained_elapsed_s"] - he_start_s
+    df["time_from_he_h"] = df["time_from_he_s"] / 3600.0
+
+
+    # =========================================================
+    # Initial background and steady-state Q
+    # =========================================================
+
+    if BASELINE_MINUTES <= 0:
+        raise ValueError("BASELINE_MINUTES must be greater than zero.")
+
+    baseline_start_s = he_start_s - BASELINE_MINUTES * 60.0
+    baseline_df = df.loc[
+        (df["retained_elapsed_s"] >= baseline_start_s)
+        & (df["retained_elapsed_s"] < he_start_s)
+    ]
+
+    if baseline_df.empty:
+        raise ValueError(
+            "No data exist in the requested pre-He baseline interval. Increase "
+            "HE_START_DELAY_MINUTES or reduce BASELINE_MINUTES."
+        )
+
+    q_initial = float(baseline_df[Q_COLUMN].median())
+
+    if STEADY_LAST_MINUTES <= 0:
+        raise ValueError("STEADY_LAST_MINUTES must be greater than zero.")
+
+    steady_start_s = retained_duration_s - STEADY_LAST_MINUTES * 60.0
+    steady_df = df.loc[df["retained_elapsed_s"] >= steady_start_s]
+
+    if steady_df.empty:
+        raise ValueError("No data were found in the steady-state interval.")
+
+    steady_modes = steady_df[Q_COLUMN].mode()
+
+    if steady_modes.empty:
+        raise ValueError("A steady-state mode could not be calculated.")
+
+    # If exact values tie for most frequent, use the median of the tied modes.
+    q_ss = float(steady_modes.median())
+
+    if q_ss <= q_initial:
+        raise ValueError(
+            "Q_SS is not greater than the initial background. Check the helium "
+            "start, trimming, and steady-state interval settings."
+        )
+
+    q_50 = q_initial + 0.5 * (q_ss - q_initial)
+
+
+    # =========================================================
+    # Resample, smooth, and find t50
+    # =========================================================
+
+    if RESAMPLE_SECONDS <= 0 or SMOOTH_WINDOW_POINTS <= 0 or CONFIRM_POINTS <= 0:
+        raise ValueError("Processing settings must be positive.")
+
+    # A TimedeltaIndex makes resampling independent of timestamp availability.
+    processing_df = df.set_index(
+        pd.to_timedelta(df["retained_elapsed_s"], unit="s")
+    )
+
+    processed = (
+        processing_df[Q_COLUMN]
+        .resample(f"{RESAMPLE_SECONDS}s")
+        .median()
+        .dropna()
+        .to_frame(name="q_resampled")
+    )
+
+    processed["q_smooth"] = (
+        processed["q_resampled"]
+        .rolling(
+            window=SMOOTH_WINDOW_POINTS,
+            center=True,
+            min_periods=1,
+        )
+        .median()
+    )
+
+    processed["retained_elapsed_s"] = processed.index.total_seconds()
+    processed["time_from_he_s"] = processed["retained_elapsed_s"] - he_start_s
+    processed["time_from_he_h"] = processed["time_from_he_s"] / 3600.0
+
+    post_he = processed.loc[processed["time_from_he_s"] >= 0].copy()
+
+    if post_he.empty:
+        raise ValueError("No processed data exist after helium introduction.")
+
+    above_50 = post_he["q_smooth"] >= q_50
+    confirmed = (
+        above_50.astype(int)
+        .rolling(CONFIRM_POINTS)
+        .sum()
+        .eq(CONFIRM_POINTS)
+    )
+    confirmed_positions = np.flatnonzero(confirmed.to_numpy())
+
+    if len(confirmed_positions) == 0:
+        raise ValueError("The smoothed signal never reached Q50.")
+
+    cross_index = max(0, confirmed_positions[0] - CONFIRM_POINTS + 1)
+
+    if cross_index == 0:
+        t_50_s = float(post_he["time_from_he_s"].iloc[0])
+    else:
+        t1 = float(post_he["time_from_he_s"].iloc[cross_index - 1])
+        t2 = float(post_he["time_from_he_s"].iloc[cross_index])
+        q1 = float(post_he["q_smooth"].iloc[cross_index - 1])
+        q2 = float(post_he["q_smooth"].iloc[cross_index])
+        t_50_s = t2 if q2 == q1 else t1 + (q_50 - q1) * (t2 - t1) / (q2 - q1)
+
+    if t_50_s <= 0:
+        raise ValueError("Calculated t50 is zero or negative.")
+    return df, processed, q_initial, q_ss, q_50, t_50_s, retained_start_s + he_start_s
 
 def interpolate_crossing(t, y, target=0.5):
     """First rising crossing of target, linearly interpolated."""
@@ -167,17 +328,17 @@ def main(argv=None):
     onset.add_argument("--he-start-min", type=float,
                        help="He introduction time in minutes from CSV recording start")
     args = parser.parse_args(argv)
-    time_zero_s = HE_START_MIN * 60.0
+    time_zero_s = None
     if args.he_start_s is not None:
         time_zero_s = args.he_start_s
     elif args.he_start_min is not None:
         time_zero_s = args.he_start_min * 60.0
-    if not np.isfinite(time_zero_s) or time_zero_s < 0:
+    if time_zero_s is not None and (not np.isfinite(time_zero_s) or time_zero_s < 0):
         raise ValueError("He introduction time must be finite and non-negative.")
 
     OUTPUT_DIR.mkdir(exist_ok=True)
     sim = read_abaqus_rpt(ABAQUS_RPT)
-    exp = read_mse_csv(MSE_CSV)
+    raw_exp, processed, q_initial, q_ss, q_50, exp_t50_s, time_zero_s = analyze_experiment(MSE_CSV, time_zero_s)
 
     model_area_mm2 = MODEL_WIDTH_MM * MODEL_OUT_OF_PLANE_MM
     if model_area_mm2 <= 0 or EXP_AREA_MM2 <= 0 or TEMPERATURE_K <= 0:
@@ -194,41 +355,25 @@ def main(argv=None):
     # ============================================================
     # 4. BACKGROUND AND TIME ORIGIN OF EXPERIMENT
     # ============================================================
-    exp["time_s"] = exp["elapsed_s"] - time_zero_s
+    exp = raw_exp.copy()
+    exp["time_s"] = exp["time_from_he_s"]
     exp["time_min"] = exp["time_s"] / 60.0
     exp["q_raw_Pa_m3_s"] = exp["leak_rate"]
-
-    if BASELINE_METHOD == "none":
-        background = 0.0
-    elif BASELINE_METHOD == "fixed":
-        background = BASELINE_FIXED_PA_M3_S
-    elif BASELINE_METHOD == "initial_median":
-        a, b = BASELINE_INITIAL_WINDOW_S
-        first = exp.loc[exp["elapsed_s"].between(a, b), "leak_rate"]
-        if first.empty:
-            raise ValueError("Empty baseline window. Adjust BASELINE_INITIAL_WINDOW_S.")
-        background = float(first.median())
-    else:
-        raise ValueError("BASELINE_METHOD must be none / fixed / initial_median")
-
-    removed_rows = 0
+    background = q_initial
+    exp["q_corrected_Pa_m3_s"] = exp["leak_rate"] - background
+    # Interpolation is for plotting/export only; t50 uses the processed grid.
+    exp["q_smooth_Pa_m3_s"] = np.interp(
+        exp["time_s"], processed["time_from_he_s"], processed["q_smooth"]
+    ) - background
+    removed_rows = int((exp["time_s"] < 0).sum()) if TRIM_BEFORE_HE else 0
     if TRIM_BEFORE_HE:
-        removed_rows = int((exp["time_s"] < 0).sum())
         exp = exp.loc[exp["time_s"] >= 0].copy().reset_index(drop=True)
-        if len(exp) < 3:
-            raise ValueError("Too few experimental points after trimming. Check He introduction time.")
-
-    exp["q_corrected_Pa_m3_s"] = exp["q_raw_Pa_m3_s"] - background
-    exp["q_smooth_Pa_m3_s"] = (exp["q_corrected_Pa_m3_s"]
-                                  .rolling(max(1, SMOOTH_POINTS), center=True,
-                                           min_periods=1).median())
 
     if SIM_REFERENCE_LAST_S > 0:
         sim_ref = last_window_reference(sim, "time_s", "q_Pa_m3_s", SIM_REFERENCE_LAST_S)
     else:
         sim_ref = float(sim["q_Pa_m3_s"].iloc[-1])
-    exp_ref = last_window_reference(exp, "elapsed_s", "q_smooth_Pa_m3_s",
-                                    EXP_REFERENCE_LAST_S)
+    exp_ref = q_ss - q_initial
     if min(sim_ref, exp_ref) <= 0:
         raise ValueError("Reference flow must be positive; verify settings.")
 
@@ -236,7 +381,7 @@ def main(argv=None):
     exp["normalized"] = exp["q_smooth_Pa_m3_s"] / exp_ref
 
     sim_t50_s = interpolate_crossing(sim["time_s"], sim["normalized"])
-    exp_t50_s = interpolate_crossing(exp["time_s"], exp["normalized"])
+    # Experimental t50 was calculated using the confirmed crossing above.
 
     # ============================================================
     # 5. PLOTS
@@ -263,7 +408,7 @@ def main(argv=None):
              label="MSE-2600 (smoothed, background-corrected)",
              ls="None", marker=".", ms=EXPERIMENT_MARKER_SIZE_PT)
     plt.axhline(sim_ref, ls="--", lw=1, label="Abaqus end-value reference")
-    plt.axhline(exp_ref, ls=":", lw=1, label="MSE end-window reference")
+    plt.axhline(exp_ref, ls=":", lw=1, label="MSE mode minus baseline reference")
     plt.xlim(x_min, x_max)
     plt.xlabel("Time [s]")
     plt.ylabel(r"He leak rate [Pa $\cdot$ m$^3$/s]", fontsize=Y_AXIS_LABEL_FONT_SIZE_PT)
@@ -327,20 +472,21 @@ def main(argv=None):
     norm_rmse = (float(np.sqrt(np.mean((aligned["exp_norm"] - aligned["sim_norm"]) ** 2)))
                  if len(aligned) else float("nan"))
     summary = (
-        "PEEK 3 mm: Abaqus vs MSE-2600 (NO FITTING)\n"
+        "PP 2 mm: Abaqus vs MSE-2600 (NO FITTING)\n"
         "=====================================================\n"
-        f"RPT rows: {len(sim)}, MSE FINE_TEST rows: {len(exp)}\n"
+        f"RPT rows: {len(sim)}, MSE retained post-He rows: {len(exp)}\n"
         f"Model area: {model_area_mm2:.6g} mm^2 (assumed depth={MODEL_OUT_OF_PLANE_MM} mm)\n"
         f"Experiment area: {EXP_AREA_MM2:.6g} mm^2\n"
         f"Area factor: {area_ratio:.8g}\n"
         f"RFL -> Q factor: {convert_factor:.8e} (Pa*m^3/s)/(kg/s)\n"
-        f"Background method: {BASELINE_METHOD}, background: {background:.8e} Pa*m^3/s\n"
+        f"Background method: pre-He median, background: {background:.8e} Pa*m^3/s\n"
         f"Experimental zero time at elapsed_s={time_zero_s:.3f}\n"
         f"Trim before He: {TRIM_BEFORE_HE}, removed rows: {removed_rows}\n"
         f"Abaqus final RFL: {sim['rfl_raw'].iloc[-1]:.8e} (mass-unit/s)\n"
         f"Abaqus reference Q: {sim_ref:.8e} Pa*m^3/s\n"
-        f"MSE reference Q (last {EXP_REFERENCE_LAST_S:.0f} s median): {exp_ref:.8e} Pa*m^3/s\n"
-        f"MSE FINE_TEST maximum Q (raw): {exp['q_raw_Pa_m3_s'].max():.8e} Pa*m^3/s\n"
+        f"MSE reference Q (final {STEADY_LAST_MINUTES:g} min mode minus baseline): {exp_ref:.8e} Pa*m^3/s\n"
+        f"MSE Q_initial={q_initial:.12e}, Q_SS={q_ss:.12e}, Q_50={q_50:.12e}\n"
+        f"MSE post-He maximum Q (raw): {exp['q_raw_Pa_m3_s'].max():.8e} Pa*m^3/s\n"
         f"Abaqus / MSE reference ratio: {sim_ref/exp_ref:.6f}\n"
         f"Abaqus t50 (with chosen reference): {sim_t50_s:.5f} s\n"
         f"MSE t50 (with chosen reference): {exp_t50_s:.5f} s\n"
@@ -350,9 +496,9 @@ def main(argv=None):
         "\nCAUTIONS:\n"
         "- RFL is assumed kg/s, requiring consistent Abaqus unit conventions.\n"
         "- Abaqus 2D out-of-plane depth is ASSUMED 1 mm until verified.\n"
-        "- Final experimental 300 s median is a REFERENCE, not proven steady state.\n"
+        "- Final experimental mode is a REFERENCE, not proven steady state.\n"
         "- Experimental time zero is not automatically He exposure onset.\n"
-        "- FINE_TEST selection removes VENTING/TEST_READY but not a He supply change.\n"
+        "- All positive experimental samples are used, matching the standalone t50 script.\n"
         "- RMSE is descriptive only; no parameter fitting has been performed.\n"
     )
     output_path("summary.txt").write_text(summary, encoding="utf-8")
