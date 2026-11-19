@@ -5,7 +5,7 @@ Usage:
     python compare_peek_abaqus_mse2600.py
     python compare_peek_abaqus_mse2600.py --he-start-min 10
 
-Put this script, PEEK_2mm_RFL_total.rpt, and mse2600_log_20260716_1.csv
+Put this script, PEEK_1mm_RFL_total.rpt, and mse2600_log_20260716_1.csv
 in the same folder. Review physical assumptions and CONFIG before use.
 """
 from pathlib import Path
@@ -19,8 +19,8 @@ import matplotlib.pyplot as plt
 # 1. SETTINGS: EDIT HERE FIRST
 # ============================================================
 BASE_DIR = Path(__file__).resolve().parent
-ABAQUS_RPT = BASE_DIR / "PP_2mm_RFL.rpt"
-MSE_CSV = BASE_DIR / "Diffusion" / "mse2600_log_20261112_2.csv"
+ABAQUS_RPT = BASE_DIR / "PP_1mm_RFL.rpt"
+MSE_CSV = BASE_DIR / "Diffusion" / "mse2600_log_20261117_1.csv"
 OUTPUT_DIR = BASE_DIR / "comparison_results"
 
 # Geometric scaling: 2D width x assumed unit out-of-plane depth.
@@ -34,12 +34,12 @@ EXP_AREA_MM2 = 41.0 * 41.0
 RFL_SIGN = +1.0
 
 # Ideal-gas conversion: Q(Pa*m^3/s) = (mass flow kg/s) * R*T/M_He.
-TEMPERATURE_K = 288.45
+TEMPERATURE_K = 290.45
 GAS_CONSTANT = 8.314462618     # Pa*m^3/(mol*K)
 HE_MOLAR_MASS_KG_MOL = 4.002602e-3
 
 # Match the standalone experimental t50 settings (no FINE_TEST filter).
-TRIM_FRONT_MINUTES = 8.0
+TRIM_FRONT_MINUTES = 6.0
 TRIM_BACK_MINUTES = 0.0
 HE_START_DELAY_MINUTES =1.0
 BASELINE_MINUTES = 1.0
