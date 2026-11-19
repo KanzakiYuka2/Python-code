@@ -412,7 +412,7 @@ def main(argv=None):
     plt.xlim(x_min, x_max)
     plt.xlabel("Time [s]")
     plt.ylabel(r"He leak rate [Pa $\cdot$ m$^3$/s]", fontsize=Y_AXIS_LABEL_FONT_SIZE_PT)
-    plt.title("PP 2 mm: absolute leak-rate comparison")
+    plt.title("PP 1 mm: absolute leak-rate comparison")
     plt.grid(alpha=0.25)
     plt.legend() 
     save_fig("01_absolute_leak_rate.png")
@@ -430,7 +430,7 @@ def main(argv=None):
     plt.xlim(x_min, x_max)
     plt.xlabel("Time [s]")
     plt.ylabel("Normalized flow / reference [-]", fontsize=Y_AXIS_LABEL_FONT_SIZE_PT)
-    plt.title("PP 2 mm: normalized permeation response")
+    plt.title("PP 1 mm: normalized permeation response")
     plt.grid(alpha=0.25)
     plt.legend()
     save_fig("02_normalized_comparison.png")
@@ -446,7 +446,7 @@ def main(argv=None):
     plt.xlim(x_min, x_max)
     plt.xlabel("Time [s]")
     plt.ylabel(r"He leak rate [Pa $\cdot$ m$^3$/s] (log)", fontsize=Y_AXIS_LABEL_FONT_SIZE_PT)
-    plt.title("PP 2 mm: early-time comparison (log scale)")
+    plt.title("PP 1 mm: early-time comparison (log scale)")
     plt.grid(alpha=0.25, which="both")
     plt.legend()
     save_fig("03_log_leak_rate.png")
@@ -472,7 +472,7 @@ def main(argv=None):
     norm_rmse = (float(np.sqrt(np.mean((aligned["exp_norm"] - aligned["sim_norm"]) ** 2)))
                  if len(aligned) else float("nan"))
     summary = (
-        "PP 2 mm: Abaqus vs MSE-2600 (NO FITTING)\n"
+        "PP 1 mm: Abaqus vs MSE-2600 (NO FITTING)\n"
         "=====================================================\n"
         f"RPT rows: {len(sim)}, MSE retained post-He rows: {len(exp)}\n"
         f"Model area: {model_area_mm2:.6g} mm^2 (assumed depth={MODEL_OUT_OF_PLANE_MM} mm)\n"

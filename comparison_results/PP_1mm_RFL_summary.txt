@@ -1,4 +1,4 @@
-PP 2 mm: Abaqus vs MSE-2600 (NO FITTING)
+PP 1 mm: Abaqus vs MSE-2600 (NO FITTING)
 =====================================================
 RPT rows: 121, MSE retained post-He rows: 1357
 Model area: 40 mm^2 (assumed depth=1.0 mm)
