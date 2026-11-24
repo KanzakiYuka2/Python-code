@@ -1,0 +1,47 @@
+ABAQUS RPT: EFFECTIVE He PERMEABILITY / DIFFUSIVITY
+=================================================================
+Input RPT: C:\Users\Ogasawara-Lab-R5-3\Desktop\Python code\UnitCell_analysis1.rpt
+Number of RFL curves summed: 1
+Time samples: 451
+End time:  2.00000000e+01 s
+
+ASSUMED GEOMETRY / CONDITIONS
+Cell y length:  1.24071770e-02 mm
+Cell x width:  1.24071770e-02 mm
+Out-of-plane depth:  1.00000000e+00 mm
+Total transport area:  1.24071770e-02 mm2
+Vf: 0.500000
+Calculated geometry Vf, if inferred from fibers:  5.00000000e-01
+Delta He pressure:  1.06325000e+05 Pa
+Reference pressure:  1.01325000e+05 Pa
+Matrix Abaqus s:  1.92052200e-12 kg/mm3
+Fiber Abaqus s:  1.00000000e-15 kg/mm3
+
+RFL11 STEADY-STATE CHECK
+Estimated plateau mass flow:  7.58296000e-17 kg/s
+Relative change in last 15% of time: 0.0000%
+Hypothetical resin-only reference flow:  2.23878832e-16 kg/s
+
+RESULTS
+P_eff:  1.78180825e-16 mol/(m*s*Pa)
+P_eff:  5.32518903e-01 Barrer
+P_eff / P_m: 0.33870822
+S_eff (current finite-storage two-phase model):  2.36895246e-06 mol/(m3*Pa)
+D_eff(P/S, current two-phase s):  7.52150278e-11 m2/s
+D_eff(P/S, current)/D_matrix: 0.67706389
+
+S_eff (IDEAL nonabsorbing fiber assumption):  2.36771961e-06 mol/(m3*Pa)
+D_eff(P/S, IDEAL nonabsorbing fiber):  7.52541917e-11 m2/s
+
+t50:  2.81779190e-01 s
+D_app(t50, 1D homogeneous):  7.58194267e-11 m2/s
+Time lag (integral):  3.50136475e-01 s
+D_app(time lag, 1D homogeneous):  7.32752565e-11 m2/s
+Ideal gas leak-rate for THIS model area at 298.15 K:  4.69640299e-11 Pa*m3/s
+
+WARNINGS / INTERPRETATION
+- CARBON_FIBER has finite solubility; use D(P/S,finite) for current numerical model, ideal nonabsorbing D for a separate idealized model ONLY.
+- D(t50) is a 1D homogeneous apparent D; the heterogeneous 2D RVE does not necessarily obey that formula.
+- Centered-cell x/y dimensions were INFERRED from fiber radius = 0.0035 mm and Vf = 0.5. Verify actual Part dimensions before interpreting t50 and D(t50).
+- Abaqus RFL must have kg/s units, and 2D out-of-plane depth must match the actual Section/model formulation.
+- For t50 and time-lag, upstream NNC must jump to a constant value at t=0 (not ramp gradually).
