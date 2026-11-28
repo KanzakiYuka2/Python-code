@@ -17,7 +17,7 @@ thickness_mm = np.array([1.0, 2.0, 3.0])
 # Characteristic time [s] (enter t50 or theta directly in seconds)
 # t50 method   : enter t50 measured after He introduction
 # time-lag method: enter theta obtained from the time-axis intercept
-characteristic_time_s = np.array([1250.32, 2562.25, 5787.25])
+characteristic_time_s = np.array([240, 990, 2008.74])
 
 if ANALYSIS_METHOD not in {"t50", "time_lag"}:
     raise ValueError('ANALYSIS_METHOD must be "t50" or "time_lag".')
